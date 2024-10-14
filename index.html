@@ -1,0 +1,753 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <title>CHaserWeb</title>
+    <!-- CodeMirrorのCSSを読み込み -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.9/codemirror.min.css">
+    <!-- CodeMirrorのテーマ（任意） -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.9/theme/idea.min.css">
+    <!-- Pyodideを読み込み -->
+    <script src="https://cdn.jsdelivr.net/pyodide/v0.23.4/full/pyodide.js"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+        }
+        /* 全体のコンテナ */
+        .container {
+            display: flex;
+            flex-wrap: wrap;
+        }
+        /* 左側の列（エディタと実行ボタン） */
+        .left-column {
+            flex: 1;
+            min-width: 300px;
+            max-width: 50%;
+            padding: 10px;
+            box-sizing: border-box;
+            display: flex;
+            flex-direction: column;
+        }
+        /* 右側の列（その他の要素） */
+        .right-column {
+            flex: 1;
+            min-width: 300px;
+            max-width: 50%;
+            padding: 10px;
+            box-sizing: border-box;
+            display: flex;
+            flex-direction: column;
+        }
+        /* 各要素のスタイル */
+        #editor {
+            height: 800px;  /* 高さを800pxに設定 */
+            border: 1px solid #ccc;
+            flex-grow: 1;  /* エディタが縦に伸びるように設定 */
+        }
+        #run-button {
+            margin-top: 10px;
+            padding: 10px 20px;
+            align-self: flex-start;
+        }
+        #game-info {
+            margin-bottom: 20px;
+        }
+        #game-grid {
+            display: grid;
+            grid-template-columns: repeat(17, 20px);
+            grid-template-rows: repeat(19, 20px);
+            gap: 1px;
+            margin-bottom: 20px;
+        }
+        .cell {
+            width: 20px;
+            height: 20px;
+            background-color: #fff;
+            border: 1px solid #ccc;
+        }
+        .floor {
+            background-color: #fff;
+        }
+        .block {
+            background-color: #777;
+        }
+        .item {
+            background-color: red;
+        }
+        .player0 {
+            background-color: blue;
+        }
+        .player1 {
+            background-color: green;
+        }
+        #console-output {
+            white-space: pre-wrap;
+            background-color: #f0f0f0;
+            padding: 10px;
+            height: 200px;
+            overflow-y: scroll;
+            flex-grow: 1;
+        }
+    </style>
+</head>
+<body>
+    <h1>CHaserWeb</h1>
+    <div class="container">
+        <!-- 左側の列（エディタと実行ボタン） -->
+        <div class="left-column">
+            <textarea id="editor"></textarea>
+            <button id="run-button">実行ボタン</button>
+        </div>
+        <!-- 右側の列（ゲーム情報、ゲーム画面、コンソール出力） -->
+        <div class="right-column">
+            <div id="game-info">
+                <h2>ゲーム情報</h2>
+                <p id="turn-number">Turn: 150</p>
+                <p id="player-scores">Scores - あなた: 0, サンプルAI: 0</p>
+            </div>
+            <div id="game-display">
+                <h2>ゲーム画面</h2>
+                <div id="game-grid"></div>
+            </div>
+            <div>
+                <h2>コンソール出力</h2>
+                <div id="console-output"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- CodeMirrorのJSを読み込み -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.9/codemirror.min.js"></script>
+    <!-- CodeMirrorのPythonモードを読み込み -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.9/mode/python/python.min.js"></script>
+    <!-- CodeMirrorのキー設定（任意） -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.9/keymap/sublime.min.js"></script>
+    <!-- CodeMirrorのアドオン（任意） -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.9/addon/edit/matchbrackets.min.js"></script>
+
+    <script>
+        // CodeMirrorエディタの初期化
+        var editor = CodeMirror.fromTextArea(document.getElementById('editor'), {
+            mode: 'python',
+            lineNumbers: true,
+            indentUnit: 4,
+            theme: 'idea',
+            keyMap: 'sublime',
+            autoCloseBrackets: true,
+            matchBrackets: true,
+            tabSize: 4,
+            indentWithTabs: true,
+        });
+
+        // sample.pyをエディタに読み込む（ユーザー提供のコード）
+        editor.setValue(`# sample.py
+
+def main():
+    value = []  # フィールド情報を保存するリスト
+    client = Client()  # サーバーと通信するためのインスタンス
+
+    def do_turn():
+        if client.game_over:
+            return False  # ゲーム終了
+
+        value = client.get_ready() # サーバーに行動準備が完了したと伝える
+        # 最優先条件：上下左右に敵がいるか->いたら攻撃
+        # 優先条件：  上下左右にハートがあるか->いたら移動
+        # 最低条件：  壁を避ける。->壁がなければ上右下左の優先順で移動します。
+
+        # 最優先条件
+        if value[1] == 1:
+            #上攻撃
+            client.put_up()
+        elif value[3] == 1:
+            #左攻撃
+            client.put_left()
+        elif value[5] == 1:
+            #右攻撃
+            client.put_right()
+        elif value[7] == 1:
+            #下攻撃
+            client.put_down()
+        # 優先条件
+        elif value[1] == 3:
+            #上移動してハートとる
+            client.walk_up()
+        elif value[5] == 3:
+            #右移動してハートとる
+            client.walk_right()
+        elif value[7] == 3:
+            #下移動してハートとる
+            client.walk_down()
+        elif value[3] == 3:
+            #左移動してハートとる
+            client.walk_left()
+        # 最低条件
+        elif value[1] == 0:
+            #上移動
+            client.walk_up()
+        elif value[5] == 0:
+            #右移動
+            client.walk_right()
+        elif value[7] == 0:
+            #下移動
+            client.walk_down()
+        elif value[3] == 0:
+            #左移動
+            client.walk_left()
+
+        return True  # ゲーム続行
+
+    # do_turn関数を外部から呼び出せるようにする
+    return do_turn
+
+if __name__ == "__main__":
+    main()
+`);
+
+        let pyodideReadyPromise = loadPyodide();
+
+        async function main() {
+            let pyodide = await pyodideReadyPromise;
+
+            // 必要なPythonパッケージをロード
+            await pyodide.loadPackage(['micropip']);
+
+            // print文をコンソール出力にリダイレクト
+            let consoleOutput = document.getElementById('console-output');
+            function writeToConsole(msg) {
+                consoleOutput.textContent += msg + '\n';
+                consoleOutput.scrollTop = consoleOutput.scrollHeight;
+            }
+            // writeToConsoleをグローバルスコープに配置
+            window.writeToConsole = writeToConsole;
+
+            // 標準出力と標準エラー出力をリダイレクト
+            pyodide.runPython(`
+import sys
+class ConsoleOutput:
+    def __init__(self):
+        self.buffer = ''
+    def write(self, s):
+        if s != '\\n':
+            self.buffer += s
+        else:
+            from js import writeToConsole
+            writeToConsole(self.buffer)
+            self.buffer = ''
+    def flush(self):
+        pass
+sys.stdout = sys.stderr = ConsoleOutput()
+`);
+
+            // updateGameDisplayをPythonから使用できるようにする
+            function updateGameDisplay(game_state, turn, scores) {
+                // scoresをJavaScriptの配列に変換
+                if (scores.toJs) {
+                    scores = scores.toJs();
+                }
+
+                // 既存のグリッドをクリア
+                let gameGrid = document.getElementById('game-grid');
+                gameGrid.innerHTML = '';
+
+                // game_stateに基づいてセルを生成
+                for (let row of game_state) {
+                    for (let cell of row) {
+                        let cellDiv = document.createElement('div');
+                        cellDiv.classList.add('cell');
+                        if (cell === 0) {
+                            cellDiv.classList.add('floor');
+                        } else if (cell === 2) {
+                            cellDiv.classList.add('block');
+                        } else if (cell === 3) {
+                            cellDiv.classList.add('item');
+                        } else if (cell === 4) {
+                            cellDiv.classList.add('player0');
+                        } else if (cell === 5) {
+                            cellDiv.classList.add('player1');
+                        } else {
+                            cellDiv.classList.add('floor');
+                        }
+                        gameGrid.appendChild(cellDiv);
+                    }
+                }
+
+                // ターン数とスコアを更新
+                document.getElementById('turn-number').textContent = `Turn: ${turn}`;
+                document.getElementById('player-scores').textContent = `Scores - あなた: ${scores[0]}, サンプルAI: ${scores[1]}`;
+            }
+
+            // 関数をグローバルスコープに配置
+            window.updateGameDisplay = updateGameDisplay;
+
+            // 修正されたCHaser.pyをPyodideにロード
+            let chaserCode = String.raw`# -*- coding: utf-8 -*-
+# ブラウザ実行用に修正された CHaser.py
+
+import re
+import sys
+# import time  # time.sleep() を削除またはコメントアウト
+from js import updateGameDisplay  # JavaScriptの関数をインポート
+
+# マップ用の定数を定義
+M_FLOOR = 0  # 床
+M_CHARA = 1  # キャラクター
+M_BLOCK = 2  # ブロック
+M_ITEM = 3   # アイテム（ハート）
+
+class Game:
+    """CHaserゲームのロジックを管理するクラス。"""
+
+    def __init__(self):
+        """ゲームの初期化を行う。"""
+        # マップデータを埋め込みで定義
+        self.map_data_str = (
+            "N:random\n"
+            "T:150\n"
+            "S:15,17\n"
+            "D:0,0,0,0,0,0,0,0,0,0,3,0,0,0,0\n"
+            "D:0,0,2,2,0,3,3,0,0,0,0,0,3,0,0\n"
+            "D:0,3,0,3,0,0,3,2,2,2,0,0,0,3,0\n"
+            "D:0,3,0,0,2,3,0,0,2,2,2,0,0,0,0\n"
+            "D:3,3,0,0,3,0,0,0,0,0,2,3,2,2,3\n"
+            "D:0,0,0,0,0,0,3,0,2,0,0,2,0,0,0\n"
+            "D:0,0,3,0,0,0,0,0,3,0,2,2,2,0,0\n"
+            "D:0,2,2,0,3,0,0,0,0,3,0,0,2,0,0\n"
+            "D:0,0,2,0,0,0,0,3,0,0,0,0,2,0,0\n"
+            "D:0,0,2,0,0,3,0,0,0,0,3,0,2,2,0\n"
+            "D:0,0,2,2,2,0,3,0,0,0,0,0,3,0,0\n"
+            "D:0,0,0,2,0,0,2,0,3,0,0,0,0,0,0\n"
+            "D:3,2,2,3,2,0,0,0,0,0,3,0,0,3,3\n"
+            "D:0,0,0,0,2,2,2,0,0,3,2,0,0,3,0\n"
+            "D:0,3,0,0,0,2,2,2,3,0,0,3,0,3,0\n"
+            "D:0,0,3,0,0,0,0,0,3,3,0,2,2,0,0\n"
+            "D:0,0,0,0,3,0,0,0,0,0,0,0,0,0,0\n"
+            "H:11,11\n"
+            "C:3,5\n"
+        )
+        # ゲームの初期化
+        self.initialize_game()
+
+    def initialize_game(self):
+        """ゲームに必要な変数を初期化する。"""
+        self.game_map = []  # マップデータ
+        self.names = ["あなた", "サンプルAI"]  # プレイヤー名
+        self.chara_x = []  # 各プレイヤーのX座標
+        self.chara_y = []  # 各プレイヤーのY座標
+        self.score = [0, 0]  # スコア
+        self.turn = -1  # 現在のターン数
+        self.life = [1, 1]  # 各プレイヤーの生存フラグ（1:生存、0:死亡）
+        self.put_winner = 0  # 'put'による勝者の判定用
+        self.turn_max = 150  # 最大ターン数
+
+        # マップデータの解析とゲームの準備
+        self.parse_map_data()
+
+    def parse_map_data(self):
+        """マップデータを解析してゲームマップを構築する。"""
+        lines = self.map_data_str.strip().split("\n")
+        map_line = 1  # マップデータは1から開始
+
+        for line in lines:
+            line = line.rstrip()
+            line_body = re.sub(r"^.:", "", line)  # 行の先頭の"N:", "D:"などを除去
+
+            if line:
+                if line[0] == "N":
+                    self.map_name = line_body  # マップ名
+                elif line[0] == "T":
+                    self.turn_max = int(line_body)  # 最大ターン数
+                elif line[0] == "S":
+                    map_size_s = line_body.split(",")
+                    self.map_size_x = int(map_size_s[0]) + 2  # マップの横サイズ（両端に壁を追加）
+                    self.map_size_y = int(map_size_s[1]) + 2  # マップの縦サイズ（上下に壁を追加）
+                    self.game_map = [[] for _ in range(self.map_size_y)]  # マップデータの初期化
+                elif line[0] == "D":
+                    # マップの各行のデータ
+                    line_body = "2," + line_body + ",2"  # 左右に壁（ブロック）を追加
+                    map_row = [int(data) for data in line_body.split(",")]
+                    self.game_map[map_line] = map_row
+                    map_line += 1
+                elif line[0] == "H":
+                    # HOTプレイヤーの初期位置
+                    chara_s = line_body.split(",")
+                    self.chara_x.insert(1, int(chara_s[0]) + 1)
+                    self.chara_y.insert(1, int(chara_s[1]) + 1)
+                elif line[0] == "C":
+                    # COOLプレイヤーの初期位置
+                    chara_s = line_body.split(",")
+                    self.chara_x.insert(0, int(chara_s[0]) + 1)
+                    self.chara_y.insert(0, int(chara_s[1]) + 1)
+
+        # マップの上下に壁（ブロック）の行を追加
+        block_row = [M_BLOCK] * self.map_size_x
+        self.game_map[0] = block_row
+        self.game_map[self.map_size_y - 1] = block_row
+
+    def get_map_value(self, x, y, c):
+        """指定した座標のマップの値を取得する。"""
+        if x < 0 or y < 0 or x >= self.map_size_x or y >= self.map_size_y:
+            return M_BLOCK  # 範囲外はブロックとする
+        if x == self.chara_x[1 - c] and y == self.chara_y[1 - c] and self.game_map[y][x] != M_BLOCK:
+            return M_CHARA  # 敵キャラクターがいる場合
+        return self.game_map[y][x]
+
+    def get_nearby_information(self, player_id):
+        """プレイヤーの周囲9マスの情報を取得する。"""
+        values = [1]  # 生存フラグをセット
+        for j in range(9):
+            values.append(
+                self.get_map_value(
+                    self.chara_x[player_id] + (j % 3) - 1,
+                    self.chara_y[player_id] + (j // 3) - 1,
+                    player_id,
+                )
+            )
+        return values
+
+    def process_walk(self, player_id, direction):
+        """移動の処理を行う。"""
+        old_x = self.chara_x[player_id]
+        old_y = self.chara_y[player_id]
+        if direction == "u":
+            self.chara_y[player_id] -= 1
+        elif direction == "d":
+            self.chara_y[player_id] += 1
+        elif direction == "r":
+            self.chara_x[player_id] += 1
+        elif direction == "l":
+            self.chara_x[player_id] -= 1
+
+        # アイテム（ハート）を取得した場合の処理
+        if (
+            self.get_map_value(self.chara_x[player_id], self.chara_y[player_id], player_id)
+            == M_ITEM
+        ):
+            self.score[player_id] += 1
+            self.game_map[self.chara_y[player_id]][self.chara_x[player_id]] = M_FLOOR
+            self.game_map[old_y][old_x] = M_BLOCK  # 移動元にブロックを置く
+        else:
+            self.game_map[old_y][old_x] = M_FLOOR  # 移動元を床にする
+
+    def process_put(self, player_id, direction):
+        """ブロック設置の処理を行う。"""
+        if direction == "u":
+            self.game_map[self.chara_y[player_id] - 1][self.chara_x[player_id]] = M_BLOCK
+        elif direction == "d":
+            self.game_map[self.chara_y[player_id] + 1][self.chara_x[player_id]] = M_BLOCK
+        elif direction == "r":
+            self.game_map[self.chara_y[player_id]][self.chara_x[player_id] + 1] = M_BLOCK
+        elif direction == "l":
+            self.game_map[self.chara_y[player_id]][self.chara_x[player_id] - 1] = M_BLOCK
+
+    def process_search(self, player_id, direction):
+        """サーチ（周囲の情報取得）の処理を行う。"""
+        x = self.chara_x[player_id]
+        y = self.chara_y[player_id]
+        if direction == "u":
+            values = []
+            for dy in range(-1, -4, -1):
+                values.append(self.get_map_value(x, y + dy, player_id))
+            return [1] + values
+        elif direction == "d":
+            values = []
+            for dy in range(1, 4):
+                values.append(self.get_map_value(x, y + dy, player_id))
+            return [1] + values
+        elif direction == "r":
+            values = []
+            for dx in range(1, 4):
+                values.append(self.get_map_value(x + dx, y, player_id))
+            return [1] + values
+        elif direction == "l":
+            values = []
+            for dx in range(-1, -4, -1):
+                values.append(self.get_map_value(x + dx, y, player_id))
+            return [1] + values
+
+    def process_look(self, player_id, direction):
+        """ルック（隣接マスの情報取得）の処理を行う。"""
+        x = self.chara_x[player_id]
+        y = self.chara_y[player_id]
+        if direction == "u":
+            value = self.get_map_value(x, y - 1, player_id)
+        elif direction == "d":
+            value = self.get_map_value(x, y + 1, player_id)
+        elif direction == "r":
+            value = self.get_map_value(x + 1, y, player_id)
+        elif direction == "l":
+            value = self.get_map_value(x - 1, y, player_id)
+        return [1, value]
+
+    def process_action(self, player_id, code):
+        """プレイヤーの行動を処理し、結果を返す。"""
+        result_values = [1]  # 初期値として生存フラグを設定
+
+        # コマンドの形式をチェック
+        if not re.match(r"^[wpls][udrl]$", code):
+            raise ValueError("無効なコマンドが入力されました: {}".format(code))
+
+        action = code[0]
+        direction = code[1]
+
+        if action == "w":
+            # Walk（移動）
+            self.process_walk(player_id, direction)
+            result_values = self.get_nearby_information(player_id)
+        elif action == "p":
+            # Put（ブロック設置）
+            self.process_put(player_id, direction)
+            result_values = self.get_nearby_information(player_id)
+        elif action == "s":
+            # Search（サーチ）
+            result_values = self.process_search(player_id, direction)
+        elif action == "l":
+            # Look（ルック）
+            result_values = self.process_look(player_id, direction)
+        else:
+            result_values = self.get_nearby_information(player_id)
+
+        # 生死判定
+        self.check_player_status()
+
+        result_values[0] = self.life[player_id]  # 生存フラグを更新
+        return result_values
+
+    def check_player_status(self):
+        """プレイヤーの生死を判定する。"""
+        for j in range(2):
+            # プレイヤーがブロックに埋まっている場合は死亡
+            if self.get_map_value(self.chara_x[j], self.chara_y[j], j) == M_BLOCK:
+                self.life[j] = 0
+                self.put_winner = 1 - j  # 相手の勝利
+            # 四方がブロックで囲まれている場合は死亡
+            if (
+                self.get_map_value(self.chara_x[j], self.chara_y[j] - 1, j) == M_BLOCK
+                and self.get_map_value(self.chara_x[j], self.chara_y[j] + 1, j) == M_BLOCK
+                and self.get_map_value(self.chara_x[j] + 1, self.chara_y[j], j) == M_BLOCK
+                and self.get_map_value(self.chara_x[j] - 1, self.chara_y[j], j) == M_BLOCK
+            ):
+                self.life[j] = 0
+                self.put_winner = 1 - j  # 相手の勝利
+
+    def opponent_action(self):
+        """サンプルボット（相手プレイヤー）の行動を決定し、処理する。"""
+        player_id = 1  # 相手プレイヤーは1
+        value = self.get_nearby_information(player_id)[1:]  # 生存フラグを除外
+        code = None
+
+        # 行動を決定
+        if value[1] == M_CHARA:
+            code = "pu"  # 上攻撃
+        elif value[3] == M_CHARA:
+            code = "pl"  # 左攻撃
+        elif value[5] == M_CHARA:
+            code = "pr"  # 右攻撃
+        elif value[7] == M_CHARA:
+            code = "pd"  # 下攻撃
+        elif value[1] == M_ITEM:
+            code = "wu"  # 上移動
+        elif value[5] == M_ITEM:
+            code = "wr"  # 右移動
+        elif value[7] == M_ITEM:
+            code = "wd"  # 下移動
+        elif value[3] == M_ITEM:
+            code = "wl"  # 左移動
+        elif value[1] == M_FLOOR:
+            code = "wu"  # 上移動
+        elif value[5] == M_FLOOR:
+            code = "wr"  # 右移動
+        elif value[7] == M_FLOOR:
+            code = "wd"  # 下移動
+        elif value[3] == M_FLOOR:
+            code = "wl"  # 左移動
+        else:
+            code = "wr"  # デフォルト行動
+
+        # 行動を処理
+        self.process_action(player_id, code)
+
+    def is_game_over(self):
+        """ゲーム終了の判定を行う。"""
+        return self.life[0] == 0 or self.life[1] == 0 or self.turn >= self.turn_max
+
+    def judge_winner(self):
+        """勝者の判定を行う。"""
+        if self.life[0] == 0 and self.life[1] == 0:
+            winner = self.put_winner  # 両者死亡なら'put'した方が勝ち
+        elif self.life[0] == 0 and self.life[1] == 1:
+            winner = 1  # 相手の勝ち
+        elif self.life[0] == 1 and self.life[1] == 0:
+            winner = 0  # あなたの勝ち
+        elif self.score[0] == self.score[1]:
+            winner = 2  # 引き分け
+        elif self.score[0] > self.score[1]:
+            winner = 0  # スコアであなたの勝ち
+        else:
+            winner = 1  # スコアで相手の勝ち
+        return winner
+
+    def get_game_state(self):
+        """現在のゲーム状態を取得する（表示用）。"""
+        # ゲームマップのコピーを作成
+        map_d = [row[:] for row in self.game_map]
+
+        # プレイヤーの位置を更新
+        for i in range(2):
+            map_d[self.chara_y[i]][self.chara_x[i]] = i + 4  # 4がplayer0、5がplayer1
+
+        return map_d
+
+    def disp(self):
+        """ゲーム画面を更新する。"""
+        game_state = self.get_game_state()
+        # ターン数を減少させて表示
+        remaining_turns = self.turn_max - self.turn
+        # スコアをリストに変換
+        scores = list(self.score)
+        updateGameDisplay(game_state, remaining_turns, scores)  # JavaScriptの関数を呼び出し
+
+class Client:
+    """ユーザーのクライアントを表現するクラス。"""
+
+    def __init__(self):
+        """クライアントの初期化を行う。"""
+        self.game = Game()  # ゲームのインスタンスを生成
+        self.player_id = 0  # あなたはプレイヤー0（COOL）
+        self.turn = 0  # 現在のターン
+        self.game_over = False  # ゲーム終了フラグ
+
+    def __order(self, order_str, gr_flag=False):
+        """プレイヤーの行動を処理し、結果を取得する。"""
+        if self.game_over:
+            return None
+
+        if self.game.life[self.player_id] == 0:
+            print("ゲーム終了")
+            self.game_over = True
+            return None
+
+        if gr_flag:
+            if self.turn > 0:
+                # 相手のターンを処理
+                self.game.opponent_action()
+
+            self.game.turn += 1
+            self.turn += 1
+            self.game.disp()  # ゲーム画面を更新
+            # print(f"あなたのターンです。")  # この行を削除しました
+            # time.sleep(0.1)  # time.sleep() を削除またはコメントアウト
+            values = self.game.get_nearby_information(self.player_id)
+            return values[1:]  # [0]は生存フラグなので除外
+        else:
+            try:
+                values = self.game.process_action(self.player_id, order_str)
+            except Exception as e:
+                print(f"エラーが発生しました: {e}")
+                self.game_over = True
+                return None
+
+            self.game.disp()  # ゲーム画面を更新
+            # time.sleep(0.1)  # time.sleep() を削除またはコメントアウト
+
+            if self.game.is_game_over():
+                print("\nゲーム終了")
+                winner = self.game.judge_winner()
+                if winner == 0:
+                    print("あなたの勝ちです！")
+                elif winner == 1:
+                    print("あなたの負けです。")
+                else:
+                    print("引き分けです。")
+                self.game_over = True
+                return values[1:]  # [0]は生存フラグなので除外
+
+            return values[1:]  # [0]は生存フラグなので除外
+
+    # サーバーとの通信で使用されるメソッド群
+    def get_ready(self):
+        return self.__order("gr", True)
+
+    def walk_right(self):
+        return self.__order("wr")
+
+    def walk_up(self):
+        return self.__order("wu")
+
+    def walk_left(self):
+        return self.__order("wl")
+
+    def walk_down(self):
+        return self.__order("wd")
+
+    def put_right(self):
+        return self.__order("pr")
+
+    def put_up(self):
+        return self.__order("pu")
+
+    def put_left(self):
+        return self.__order("pl")
+
+    def put_down(self):
+        return self.__order("pd")
+
+    def look_up(self):
+        return self.__order("lu")
+
+    def look_down(self):
+        return self.__order("ld")
+
+    def look_right(self):
+        return self.__order("lr")
+
+    def look_left(self):
+        return self.__order("ll")
+
+    def search_up(self):
+        return self.__order("su")
+
+    def search_down(self):
+        return self.__order("sd")
+
+    def search_right(self):
+        return self.__order("sr")
+
+    def search_left(self):
+        return self.__order("sl")
+`;
+            await pyodide.runPythonAsync(chaserCode);
+
+            // 実行ボタンがクリックされたときにユーザーコードを実行
+            document.getElementById('run-button').addEventListener('click', async () => {
+                consoleOutput.textContent = ''; // コンソール出力をクリア
+                let userCode = editor.getValue();
+                try {
+                    // ユーザーコードを実行して、do_turn関数を取得
+                    await pyodide.runPythonAsync(`
+${userCode}
+
+do_turn = main()
+`);
+                    // ターンごとの処理を開始
+                    function runTurn() {
+                        let result = pyodide.globals.get('do_turn')();
+                        if (result) {
+                            // ゲームが続行中の場合、次のターンを実行
+                            setTimeout(runTurn, 500);  // 100ミリ秒後に次のターンを実行
+                        } else {
+                            // ゲーム終了
+                            console.log('ゲームが終了しました');
+                        }
+                    }
+                    runTurn();
+                } catch (err) {
+                    writeToConsole(err);
+                }
+            });
+        }
+
+        main();
+    </script>
+</body>
+</html>
