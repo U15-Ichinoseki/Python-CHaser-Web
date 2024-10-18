@@ -49,7 +49,7 @@
             gap: 10px;
             margin-top: 10px;
         }
-        #run-button, #download-button {
+        #run-button, #download-button, #upload-button {
             padding: 10px 20px;
             align-self: flex-start;
         }
@@ -92,6 +92,10 @@
             overflow-y: scroll;
             flex-grow: 1;
         }
+        /* ファイル入力のスタイルを隠す */
+        #file-input {
+            display: none;
+        }
     </style>
 </head>
 <body>
@@ -103,6 +107,9 @@
             <div class="button-group">
                 <button id="run-button">実行ボタン</button>
                 <button id="download-button">ダウンロード</button>
+                <button id="upload-button">アップロード</button>
+                <!-- ファイル入力要素（非表示） -->
+                <input type="file" id="file-input" accept=".py">
             </div>
         </div>
         <!-- 右側の列（ゲーム情報、ゲーム画面、コンソール出力） -->
@@ -837,6 +844,25 @@ do_turn = main()
                     a.click();
                     document.body.removeChild(a);
                     URL.revokeObjectURL(url);
+                }
+            });
+
+            // アップロードボタンのクリックイベントを追加
+            document.getElementById('upload-button').addEventListener('click', () => {
+                // ファイル選択ダイアログを表示
+                document.getElementById('file-input').click();
+            });
+
+            // ファイルが選択されたときの処理
+            document.getElementById('file-input').addEventListener('change', (event) => {
+                let file = event.target.files[0];
+                if (file) {
+                    let reader = new FileReader();
+                    reader.onload = function(e) {
+                        let content = e.target.result;
+                        editor.setValue(content);
+                    };
+                    reader.readAsText(file);
                 }
             });
         }
