@@ -142,63 +142,57 @@
         // sample.pyをエディタに読み込む（ユーザー提供のコード）
         editor.setValue(`# sample.py
 
+import CHaser  # 同じディレクトリに CHaser.py がある前提
+
 def main():
     value = []  # フィールド情報を保存するリスト
-    client = Client()  # サーバーと通信するためのインスタンス
+    client = CHaser.Client()  # サーバーと通信するためのインスタンス
 
-    def do_turn():
-        if client.game_over:
-            return False  # ゲーム終了
-
-        value = client.get_ready() # サーバーに行動準備が完了したと伝える
+    while True:
+        value = client.get_ready()  # サーバーに行動準備が完了したと伝える
         # 最優先条件：上下左右に敵がいるか->いたら攻撃
         # 優先条件：  上下左右にハートがあるか->いたら移動
         # 最低条件：  壁を避ける。->壁がなければ上右下左の優先順で移動します。
 
         # 最優先条件
         if value[1] == 1:
-            #上攻撃
+            # 上攻撃
             client.put_up()
         elif value[3] == 1:
-            #左攻撃
+            # 左攻撃
             client.put_left()
         elif value[5] == 1:
-            #右攻撃
+            # 右攻撃
             client.put_right()
         elif value[7] == 1:
-            #下攻撃
+            # 下攻撃
             client.put_down()
         # 優先条件
         elif value[1] == 3:
-            #上移動してハートとる
+            # 上移動してハートとる
             client.walk_up()
         elif value[5] == 3:
-            #右移動してハートとる
+            # 右移動してハートとる
             client.walk_right()
         elif value[7] == 3:
-            #下移動してハートとる
+            # 下移動してハートとる
             client.walk_down()
         elif value[3] == 3:
-            #左移動してハートとる
+            # 左移動してハートとる
             client.walk_left()
         # 最低条件
         elif value[1] == 0:
-            #上移動
+            # 上移動
             client.walk_up()
         elif value[5] == 0:
-            #右移動
+            # 右移動
             client.walk_right()
         elif value[7] == 0:
-            #下移動
+            # 下移動
             client.walk_down()
         elif value[3] == 0:
-            #左移動
+            # 左移動
             client.walk_left()
-
-        return True  # ゲーム続行
-
-    # do_turn関数を外部から呼び出せるようにする
-    return do_turn
 
 if __name__ == "__main__":
     main()
@@ -281,12 +275,12 @@ sys.stdout = sys.stderr = ConsoleOutput()
             window.updateGameDisplay = updateGameDisplay;
 
             // 修正されたCHaser.pyをPyodideにロード
-            let chaserCode = String.raw`# -*- coding: utf-8 -*-
+            let chaserCode = `
+# -*- coding: utf-8 -*-
 # ブラウザ実行用に修正された CHaser.py
 
 import re
 import sys
-# import time  # time.sleep() を削除またはコメントアウト
 from js import updateGameDisplay  # JavaScriptの関数をインポート
 
 # マップ用の定数を定義
@@ -302,28 +296,28 @@ class Game:
         """ゲームの初期化を行う。"""
         # マップデータを埋め込みで定義
         self.map_data_str = (
-            "N:random\n"
-            "T:150\n"
-            "S:15,17\n"
-            "D:0,0,0,0,0,0,0,0,0,0,3,0,0,0,0\n"
-            "D:0,0,2,2,0,3,3,0,0,0,0,0,3,0,0\n"
-            "D:0,3,0,3,0,0,3,2,2,2,0,0,0,3,0\n"
-            "D:0,3,0,0,2,3,0,0,2,2,2,0,0,0,0\n"
-            "D:3,3,0,0,3,0,0,0,0,0,2,3,2,2,3\n"
-            "D:0,0,0,0,0,0,3,0,2,0,0,2,0,0,0\n"
-            "D:0,0,3,0,0,0,0,0,3,0,2,2,2,0,0\n"
-            "D:0,2,2,0,3,0,0,0,0,3,0,0,2,0,0\n"
-            "D:0,0,2,0,0,0,0,3,0,0,0,0,2,0,0\n"
-            "D:0,0,2,0,0,3,0,0,0,0,3,0,2,2,0\n"
-            "D:0,0,2,2,2,0,3,0,0,0,0,0,3,0,0\n"
-            "D:0,0,0,2,0,0,2,0,3,0,0,0,0,0,0\n"
-            "D:3,2,2,3,2,0,0,0,0,0,3,0,0,3,3\n"
-            "D:0,0,0,0,2,2,2,0,0,3,2,0,0,3,0\n"
-            "D:0,3,0,0,0,2,2,2,3,0,0,3,0,3,0\n"
-            "D:0,0,3,0,0,0,0,0,3,3,0,2,2,0,0\n"
-            "D:0,0,0,0,3,0,0,0,0,0,0,0,0,0,0\n"
-            "H:11,11\n"
-            "C:3,5\n"
+            "N:random\\n"
+            "T:150\\n"
+            "S:15,17\\n"
+            "D:0,0,0,0,0,0,0,0,0,0,3,0,0,0,0\\n"
+            "D:0,0,2,2,0,3,3,0,0,0,0,0,3,0,0\\n"
+            "D:0,3,0,3,0,0,3,2,2,2,0,0,0,3,0\\n"
+            "D:0,3,0,0,2,3,0,0,2,2,2,0,0,0,0\\n"
+            "D:3,3,0,0,3,0,0,0,0,0,2,3,2,2,3\\n"
+            "D:0,0,0,0,0,0,3,0,2,0,0,2,0,0,0\\n"
+            "D:0,0,3,0,0,0,0,0,3,0,2,2,2,0,0\\n"
+            "D:0,2,2,0,3,0,0,0,0,3,0,0,2,0,0\\n"
+            "D:0,0,2,0,0,0,0,3,0,0,0,0,2,0,0\\n"
+            "D:0,0,2,0,0,3,0,0,0,0,3,0,2,2,0\\n"
+            "D:0,0,2,2,2,0,3,0,0,0,0,0,3,0,0\\n"
+            "D:0,0,0,2,0,0,2,0,3,0,0,0,0,0,0\\n"
+            "D:3,2,2,3,2,0,0,0,0,0,3,0,0,3,3\\n"
+            "D:0,0,0,0,2,2,2,0,0,3,2,0,0,3,0\\n"
+            "D:0,3,0,0,0,2,2,2,3,0,0,3,0,3,0\\n"
+            "D:0,0,3,0,0,0,0,0,3,3,0,2,2,0,0\\n"
+            "D:0,0,0,0,3,0,0,0,0,0,0,0,0,0,0\\n"
+            "H:11,11\\n"
+            "C:3,5\\n"
         )
         # ゲームの初期化
         self.initialize_game()
@@ -345,7 +339,7 @@ class Game:
 
     def parse_map_data(self):
         """マップデータを解析してゲームマップを構築する。"""
-        lines = self.map_data_str.strip().split("\n")
+        lines = self.map_data_str.strip().split("\\n")
         map_line = 1  # マップデータは1から開始
 
         for line in lines:
@@ -635,8 +629,6 @@ class Client:
             self.game.turn += 1
             self.turn += 1
             self.game.disp()  # ゲーム画面を更新
-            # print(f"あなたのターンです。")  # この行を削除しました
-            # time.sleep(0.1)  # time.sleep() を削除またはコメントアウト
             values = self.game.get_nearby_information(self.player_id)
             return values[1:]  # [0]は生存フラグなので除外
         else:
@@ -648,10 +640,9 @@ class Client:
                 return None
 
             self.game.disp()  # ゲーム画面を更新
-            # time.sleep(0.1)  # time.sleep() を削除またはコメントアウト
 
             if self.game.is_game_over():
-                print("\nゲーム終了")
+                print("\\nゲーム終了")
                 winner = self.game.judge_winner()
                 if winner == 0:
                     print("あなたの勝ちです！")
@@ -716,25 +707,96 @@ class Client:
     def search_left(self):
         return self.__order("sl")
 `;
-            await pyodide.runPythonAsync(chaserCode);
+            // CHaser.pyを仮想ファイルシステムに書き込む
+            pyodide.FS.writeFile('CHaser.py', chaserCode);
+
+            // 変換用のコードをPyodideにロード
+            let transformerCode = `
+import ast
+
+def transform_code(source_code):
+    # ソースコードをAST（抽象構文木）にパースします
+    tree = ast.parse(source_code)
+
+    class CodeTransformer(ast.NodeTransformer):
+        def visit_FunctionDef(self, node):
+            # 'main'関数のみを対象にします
+            if node.name == 'main':
+                new_body = []
+                do_turn_func = None
+
+                for stmt in node.body:
+                    # while Trueループを探します
+                    if isinstance(stmt, ast.While) and isinstance(stmt.test, ast.Constant) and stmt.test.value == True:
+                        # 'do_turn'関数を作成します
+                        do_turn_func = ast.FunctionDef(
+                            name='do_turn',
+                            args=ast.arguments(
+                                posonlyargs=[],
+                                args=[],
+                                kwonlyargs=[],
+                                kw_defaults=[],
+                                defaults=[]
+                            ),
+                            body=stmt.body + [ast.Return(value=ast.Constant(value=True))],
+                            decorator_list=[]
+                        )
+                    else:
+                        new_body.append(stmt)
+
+                # 'do_turn'関数を'main'に追加します
+                if do_turn_func:
+                    # 'do_turn'の最初にgame_overチェックを追加します
+                    game_over_check = ast.If(
+                        test=ast.Attribute(value=ast.Name(id='client', ctx=ast.Load()), attr='game_over', ctx=ast.Load()),
+                        body=[ast.Return(value=ast.Constant(value=False))],
+                        orelse=[]
+                    )
+                    do_turn_func.body.insert(0, game_over_check)
+
+                    new_body.append(do_turn_func)
+                    # 'main'を修正して'do_turn'を返すようにします
+                    new_body.append(ast.Return(value=ast.Name(id='do_turn', ctx=ast.Load())))
+                node.body = new_body
+            return node
+
+    # ASTを変換します
+    transformer = CodeTransformer()
+    new_tree = transformer.visit(tree)
+    ast.fix_missing_locations(new_tree)
+
+    # 変換されたコードを文字列に変換して返します
+    transformed_code = ast.unparse(new_tree)
+    return transformed_code
+`;
+            await pyodide.runPythonAsync(transformerCode);
 
             // 実行ボタンがクリックされたときにユーザーコードを実行
             document.getElementById('run-button').addEventListener('click', async () => {
                 consoleOutput.textContent = ''; // コンソール出力をクリア
                 let userCode = editor.getValue();
                 try {
-                    // ユーザーコードを実行して、do_turn関数を取得
+                    // ユーザーコードを変換
+                    pyodide.globals.set('user_code', userCode);
                     await pyodide.runPythonAsync(`
-${userCode}
+transformed_code = transform_code(user_code)
+`);
+                    let transformed_code = pyodide.globals.get('transformed_code');
 
+                    // 変換されたコードを実行して、do_turn関数を取得
+                    pyodide.globals.set('transformed_code', transformed_code);
+                    await pyodide.runPythonAsync(`
+exec(transformed_code)
 do_turn = main()
 `);
+
                     // ターンごとの処理を開始
                     function runTurn() {
-                        let result = pyodide.globals.get('do_turn')();
+                        let do_turn = pyodide.globals.get('do_turn');
+                        let result = do_turn();
                         if (result) {
                             // ゲームが続行中の場合、次のターンを実行
-                            setTimeout(runTurn, 500);  // 100ミリ秒後に次のターンを実行
+                            setTimeout(runTurn, 500);  // 500ミリ秒後に次のターンを実行
                         } else {
                             // ゲーム終了
                             console.log('ゲームが終了しました');
