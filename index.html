@@ -3,12 +3,10 @@
 <head>
     <meta charset="UTF-8">
     <title>CHaserWeb</title>
-    <!-- CodeMirrorのCSSを読み込み -->
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.9/codemirror.min.css">
-    <!-- CodeMirrorのテーマ（任意） -->
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.9/theme/idea.min.css">
     <!-- Pyodideを読み込み -->
     <script src="https://cdn.jsdelivr.net/pyodide/v0.23.4/full/pyodide.js"></script>
+    <!-- monaco-editorを読み込み -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.34.0/min/vs/loader.min.js"></script>
     <style>
         body {
             font-family: Arial, sans-serif;
@@ -103,7 +101,7 @@
     <div class="container">
         <!-- 左側の列（エディタと実行ボタン） -->
         <div class="left-column">
-            <textarea id="editor"></textarea>
+            <div id="editor"></div>
             <div class="button-group">
                 <button id="run-button">実行ボタン</button>
                 <button id="download-button">ダウンロード</button>
@@ -130,31 +128,19 @@
         </div>
     </div>
 
-    <!-- CodeMirrorのJSを読み込み -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.9/codemirror.min.js"></script>
-    <!-- CodeMirrorのPythonモードを読み込み -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.9/mode/python/python.min.js"></script>
-    <!-- CodeMirrorのキー設定（任意） -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.9/keymap/sublime.min.js"></script>
-    <!-- CodeMirrorのアドオン（任意） -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.9/addon/edit/matchbrackets.min.js"></script>
-
     <script>
-        // CodeMirrorエディタの初期化
-        var editor = CodeMirror.fromTextArea(document.getElementById('editor'), {
-            mode: 'python',
-            lineNumbers: true,
-            indentUnit: 4,
-            theme: 'idea',
-            keyMap: 'sublime',
-            autoCloseBrackets: true,
-            matchBrackets: true,
-            tabSize: 4,
-            indentWithTabs: true,
-        });
+        // monaco-editorの設定
+        require.config({ paths: { 'vs': 'https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.34.0/min/vs' }});
+        window.MonacoEnvironment = { getWorkerUrl: function(workerId, label) {
+            return 'data:text/javascript;charset=utf-8,' + encodeURIComponent(`
+                self.MonacoEnvironment = { baseUrl: 'https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.34.0/min/' };
+                importScripts('https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.34.0/min/vs/base/worker/workerMain.js');`);
+        }};
 
-        // sample.pyをエディタに読み込む（ユーザー提供のコード）
-        editor.setValue(`# sample.py
+        require(['vs/editor/editor.main'], function () {
+            // エディタの初期化
+            window.editor = monaco.editor.create(document.getElementById('editor'), {
+                value: `# sample.py
 
 import CHaser  # 同じディレクトリに CHaser.py がある前提
 
@@ -210,7 +196,12 @@ def main():
 
 if __name__ == "__main__":
     main()
-`);
+`,
+                language: 'python',
+                automaticLayout: true,
+                theme: 'vs-light',
+            });
+        });
 
         let pyodideReadyPromise = loadPyodide();
 
@@ -721,6 +712,7 @@ class Client:
     def search_left(self):
         return self.__order("sl")
 `;
+
             // CHaser.pyを仮想ファイルシステムに書き込む
             pyodide.FS.writeFile('CHaser.py', chaserCode);
 
