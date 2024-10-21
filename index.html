@@ -267,82 +267,12 @@ if __name__ == "__main__":
 
         let pyodideReadyPromise = loadPyodide();
 
-        async function main() {
-            let pyodide = await pyodideReadyPromise;
+        // タイマーIDとゲーム実行フラグの定義
+        let turnTimeout;
+        let gameRunning = false;
 
-            // 必要なPythonパッケージをロード
-            await pyodide.loadPackage(['micropip']);
-
-            // print文をコンソール出力にリダイレクト
-            let consoleOutput = document.getElementById('console-output');
-            function writeToConsole(msg) {
-                consoleOutput.textContent += msg + '\n';
-                consoleOutput.scrollTop = consoleOutput.scrollHeight;
-            }
-            // writeToConsoleをグローバルスコープに配置
-            window.writeToConsole = writeToConsole;
-
-            // 標準出力と標準エラー出力をリダイレクト
-            pyodide.runPython(`
-import sys
-class ConsoleOutput:
-    def __init__(self):
-        self.buffer = ''
-    def write(self, s):
-        if s != '\\n':
-            self.buffer += s
-        else:
-            from js import writeToConsole
-            writeToConsole(self.buffer)
-            self.buffer = ''
-    def flush(self):
-        pass
-sys.stdout = sys.stderr = ConsoleOutput()
-`);
-
-            // updateGameDisplayをPythonから使用できるようにする
-            function updateGameDisplay(game_state, turn, scores) {
-                // scoresをJavaScriptの配列に変換
-                if (scores.toJs) {
-                    scores = scores.toJs();
-                }
-
-                // 既存のグリッドをクリア
-                let gameGrid = document.getElementById('game-grid');
-                gameGrid.innerHTML = '';
-
-                // game_stateに基づいてセルを生成
-                for (let row of game_state) {
-                    for (let cell of row) {
-                        let cellDiv = document.createElement('div');
-                        cellDiv.classList.add('cell');
-                        if (cell === 0) {
-                            cellDiv.classList.add('floor');
-                        } else if (cell === 2) {
-                            cellDiv.classList.add('block');
-                        } else if (cell === 3) {
-                            cellDiv.classList.add('item');
-                        } else if (cell === 4) {
-                            cellDiv.classList.add('player0');
-                        } else if (cell === 5) {
-                            cellDiv.classList.add('player1');
-                        } else {
-                            cellDiv.classList.add('floor');
-                        }
-                        gameGrid.appendChild(cellDiv);
-                    }
-                }
-
-                // ターン数とスコアを更新
-                document.getElementById('turn-number').textContent = `Turn: ${turn}`;
-                document.getElementById('player-scores').textContent = `Scores - あなた: ${scores[0]}, サンプルAI: ${scores[1]}`;
-            }
-
-            // 関数をグローバルスコープに配置
-            window.updateGameDisplay = updateGameDisplay;
-
-            // 修正されたCHaser.pyをPyodideにロード
-            let chaserCode = `
+        // chaserCodeとtransformerCodeをグローバルに定義
+        let chaserCode = `
 # -*- coding: utf-8 -*-
 # ブラウザ実行用に修正された CHaser.py
 
@@ -775,11 +705,7 @@ class Client:
         return self.__order("sl")
 `;
 
-            // CHaser.pyを仮想ファイルシステムに書き込む
-            pyodide.FS.writeFile('CHaser.py', chaserCode);
-
-            // 変換用のコードをPyodideにロード
-            let transformerCode = `
+        let transformerCode = `
 import ast
 
 def transform_code(source_code):
@@ -837,44 +763,143 @@ def transform_code(source_code):
     transformed_code = ast.unparse(new_tree)
     return transformed_code
 `;
-            await pyodide.runPythonAsync(transformerCode);
+
+        async function main() {
+            let pyodide = await pyodideReadyPromise;
+
+            // 必要なPythonパッケージをロード
+            await pyodide.loadPackage(['micropip']);
+
+            // print文をコンソール出力にリダイレクト
+            let consoleOutput = document.getElementById('console-output');
+            function writeToConsole(msg) {
+                consoleOutput.textContent += msg + '\n';
+                consoleOutput.scrollTop = consoleOutput.scrollHeight;
+            }
+            // writeToConsoleをグローバルスコープに配置
+            window.writeToConsole = writeToConsole;
+
+            // 標準出力と標準エラー出力をリダイレクト
+            pyodide.runPython(`
+import sys
+class ConsoleOutput:
+    def __init__(self):
+        self.buffer = ''
+    def write(self, s):
+        if s != '\\n':
+            self.buffer += s
+        else:
+            from js import writeToConsole
+            writeToConsole(self.buffer)
+            self.buffer = ''
+    def flush(self):
+        pass
+sys.stdout = sys.stderr = ConsoleOutput()
+`);
+
+            // updateGameDisplayをPythonから使用できるようにする
+            function updateGameDisplay(game_state, turn, scores) {
+                // scoresをJavaScriptの配列に変換
+                if (scores.toJs) {
+                    scores = scores.toJs();
+                }
+
+                // 既存のグリッドをクリア
+                let gameGrid = document.getElementById('game-grid');
+                gameGrid.innerHTML = '';
+
+                // game_stateに基づいてセルを生成
+                for (let row of game_state) {
+                    for (let cell of row) {
+                        let cellDiv = document.createElement('div');
+                        cellDiv.classList.add('cell');
+                        if (cell === 0) {
+                            cellDiv.classList.add('floor');
+                        } else if (cell === 2) {
+                            cellDiv.classList.add('block');
+                        } else if (cell === 3) {
+                            cellDiv.classList.add('item');
+                        } else if (cell === 4) {
+                            cellDiv.classList.add('player0');
+                        } else if (cell === 5) {
+                            cellDiv.classList.add('player1');
+                        } else {
+                            cellDiv.classList.add('floor');
+                        }
+                        gameGrid.appendChild(cellDiv);
+                    }
+                }
+
+                // ターン数とスコアを更新
+                document.getElementById('turn-number').textContent = `Turn: ${turn}`;
+                document.getElementById('player-scores').textContent = `Scores - あなた: ${scores[0]}, サンプルAI: ${scores[1]}`;
+            }
+
+            // 関数をグローバルスコープに配置
+            window.updateGameDisplay = updateGameDisplay;
 
             // 実行ボタンがクリックされたときにユーザーコードを実行
             document.getElementById('run-button').addEventListener('click', async () => {
                 consoleOutput.textContent = ''; // コンソール出力をクリア
+
+                // 前回の実行を停止
+                if (turnTimeout) {
+                    clearTimeout(turnTimeout);
+                    turnTimeout = null;
+                }
+                gameRunning = false;
+
+                // Pyodideのグローバル変数をクリア
+                pyodide.globals.clear();
+
                 let userCode = editor.getValue();
                 try {
-                    // ユーザーコードを変換
-                    pyodide.globals.set('user_code', userCode);
-                    await pyodide.runPythonAsync(`
-transformed_code = transform_code(user_code)
-`);
-                    let transformed_code = pyodide.globals.get('transformed_code');
-
-                    // 変換されたコードを実行して、do_turn関数を取得
-                    pyodide.globals.set('transformed_code', transformed_code);
-                    await pyodide.runPythonAsync(`
-exec(transformed_code)
-do_turn = main()
-`);
-
-                    // ターンごとの処理を開始
-                    function runTurn() {
-                        let do_turn = pyodide.globals.get('do_turn');
-                        let result = do_turn();
-                        if (result) {
-                            // ゲームが続行中の場合、次のターンを実行
-                            setTimeout(runTurn, 500);  // 500ミリ秒後に次のターンを実行
-                        } else {
-                            // ゲーム終了
-                            console.log('ゲームが終了しました');
-                        }
-                    }
-                    runTurn();
+                    // ユーザーコードを実行
+                    await executeUserCode(userCode);
                 } catch (err) {
                     writeToConsole(err);
                 }
             });
+
+            async function executeUserCode(userCode) {
+                // 必要なモジュールを再インポート
+                await pyodide.runPythonAsync(transformerCode);
+
+                // CHaser.pyを仮想ファイルシステムに書き込む
+                pyodide.FS.writeFile('CHaser.py', chaserCode);
+
+                // ユーザーコードを変換して実行
+                pyodide.globals.set('user_code', userCode);
+                await pyodide.runPythonAsync(`
+transformed_code = transform_code(user_code)
+`);
+                let transformed_code = pyodide.globals.get('transformed_code');
+
+                pyodide.globals.set('transformed_code', transformed_code);
+                await pyodide.runPythonAsync(`
+exec(transformed_code)
+do_turn = main()
+`);
+
+                // ゲーム実行フラグを設定
+                gameRunning = true;
+                runTurn();
+            }
+
+            function runTurn() {
+                if (!gameRunning) return;
+
+                let do_turn = pyodide.globals.get('do_turn');
+                let result = do_turn();
+                if (result) {
+                    // ゲームが続行中の場合、次のターンを実行
+                    turnTimeout = setTimeout(runTurn, 500);
+                } else {
+                    // ゲーム終了
+                    gameRunning = false;
+                    console.log('ゲームが終了しました');
+                }
+            }
 
             // ダウンロードボタンのクリックイベントを追加
             document.getElementById('download-button').addEventListener('click', () => {
