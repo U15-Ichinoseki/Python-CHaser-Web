@@ -6,117 +6,170 @@
     <!-- CodeMirrorのCSSを読み込み -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.13/codemirror.min.css">
     <!-- CodeMirrorのテーマ（任意） -->
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.13/theme/idea.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.13/theme/monokai.min.css">
     <!-- Pyodideを読み込み -->
     <script src="https://cdn.jsdelivr.net/pyodide/v0.23.4/full/pyodide.js"></script>
     <style>
+        /* 全体のスタイル */
         body {
-            font-family: Arial, sans-serif;
+            margin: 0;
+            font-family: 'Roboto', sans-serif;
+            background-color: #1e1e1e;
+            color: #ccc;
         }
-        /* 全体のコンテナ */
+
+        /* ヘッダーのスタイル */
+        .header {
+            background-color: #333;
+            padding: 10px 20px;
+            display: flex;
+            align-items: center;
+            color: #fff;
+        }
+
+        .header h1 {
+            margin: 0;
+            font-size: 24px;
+        }
+
+        /* メインコンテナ */
         .container {
             display: flex;
-            flex-wrap: wrap;
+            height: calc(100vh - 50px);
         }
-        /* 左側の列（エディタと実行ボタン） */
+
+        /* 左側の列（エディタとコンソール） */
         .left-column {
             flex: 1;
-            min-width: 300px;
-            max-width: 100%;
-            padding: 10px;
-            box-sizing: border-box;
             display: flex;
             flex-direction: column;
+            border-right: 1px solid #444;
         }
-        /* 右側の列（その他の要素） */
-        .right-column {
-            flex: 1;
-            min-width: 300px;
-            max-width: 50%;
-            padding: 10px;
-            box-sizing: border-box;
-            display: flex;
-            flex-direction: column;
-        }
-        /* 各要素のスタイル */
+
+        /* エディタ部分 */
         #editor {
-            height: 800px;  /* 高さを800pxに設定 */
-            border: 1px solid #ccc;
-            flex-grow: 1;  /* エディタが縦に伸びるように設定 */
+            flex-grow: 1;
         }
+
+        /* ボタン群 */
         .button-group {
             display: flex;
-            gap: 10px;
-            margin-top: 10px;
+            padding: 10px;
+            background-color: #2d2d2d;
+            border-top: 1px solid #444;
         }
-        #run-button, #download-button, #upload-button {
-            padding: 10px 20px;
-            align-self: flex-start;
+
+        .button-group button {
+            background-color: #3c3c3c;
+            color: #fff;
+            border: none;
+            padding: 8px 16px;
+            margin-right: 10px;
+            cursor: pointer;
+            border-radius: 4px;
         }
+
+        .button-group button:hover {
+            background-color: #555;
+        }
+
+        /* コンソール出力 */
+        #console-output {
+            background-color: #1e1e1e;
+            color: #fff;
+            padding: 10px;
+            height: 150px;
+            overflow-y: auto;
+            font-family: monospace;
+            border-top: 1px solid #444;
+        }
+
+        /* 右側の列（ゲーム画面） */
+        .right-column {
+            width: 400px;
+            background-color: #252526;
+            display: flex;
+            flex-direction: column;
+            padding: 10px;
+            box-sizing: border-box;
+        }
+
+        /* ゲーム情報 */
         #game-info {
             margin-bottom: 20px;
         }
+
+        #game-info h2 {
+            color: #fff;
+            font-size: 18px;
+            margin-bottom: 10px;
+        }
+
+        /* ゲームグリッド */
         #game-grid {
             display: grid;
             grid-template-columns: repeat(17, 20px);
             grid-template-rows: repeat(19, 20px);
             gap: 1px;
-            margin-bottom: 20px;
         }
+
         .cell {
             width: 20px;
             height: 20px;
-            background-color: #fff;
-            border: 1px solid #ccc;
+            background-color: #333;
         }
+
         .floor {
-            background-color: #fff;
+            background-color: #3c3c3c;
         }
+
         .block {
             background-color: #777;
         }
+
         .item {
-            background-color: red;
+            background-color: #e91e63;
         }
+
         .player0 {
-            background-color: blue;
+            background-color: #2196f3;
         }
+
         .player1 {
-            background-color: green;
+            background-color: #4caf50;
         }
-        #console-output {
-            white-space: pre-wrap;
-            background-color: #f0f0f0;
-            padding: 10px;
-            height: 200px;
-            overflow-y: scroll;
-            flex-grow: 1;
-        }
-        /* ファイル入力のスタイルを隠す */
+
+        /* 隠しファイル入力 */
         #file-input {
             display: none;
         }
 
-        .CodeMirror{
-            height: 800px
+        /* CodeMirrorのスタイル調整 */
+        .CodeMirror {
+            height: 100%;
+            background-color: #1e1e1e;
+            color: #fff;
         }
     </style>
 </head>
 <body>
-    <h1>CHaserWeb</h1>
+    <div class="header">
+        <h1>CHaserWeb</h1>
+    </div>
     <div class="container">
-        <!-- 左側の列（エディタと実行ボタン） -->
+        <!-- 左側の列（エディタとコンソール） -->
         <div class="left-column">
             <textarea id="editor"></textarea>
             <div class="button-group">
-                <button id="run-button">実行ボタン</button>
+                <button id="run-button">実行</button>
                 <button id="download-button">ダウンロード</button>
                 <button id="upload-button">アップロード</button>
                 <!-- ファイル入力要素（非表示） -->
                 <input type="file" id="file-input" accept=".py">
             </div>
+            <div id="console-output"></div>
         </div>
-        <!-- 右側の列（ゲーム情報、ゲーム画面、コンソール出力） -->
+        <!-- 右側の列（ゲーム画面） -->
         <div class="right-column">
             <div id="game-info">
                 <h2>ゲーム情報</h2>
@@ -126,10 +179,6 @@
             <div id="game-display">
                 <h2>ゲーム画面</h2>
                 <div id="game-grid"></div>
-            </div>
-            <div>
-                <h2>コンソール出力</h2>
-                <div id="console-output"></div>
             </div>
         </div>
     </div>
@@ -149,7 +198,7 @@
             mode: 'python',
             lineNumbers: true,
             indentUnit: 4,
-            theme: 'idea',
+            theme: 'monokai',
             keyMap: 'sublime',
             autoCloseBrackets: true,
             matchBrackets: true,
