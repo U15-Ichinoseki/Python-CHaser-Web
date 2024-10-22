@@ -16,6 +16,9 @@
             font-family: 'Roboto', sans-serif;
             background-color: #1e1e1e;
             color: #ccc;
+            /* Firefox用スクロールバーのスタイル */
+            scrollbar-width: thin;
+            scrollbar-color: #555 #2d2d2d;
         }
 
         /* ヘッダーのスタイル */
@@ -44,6 +47,9 @@
             display: flex;
             flex-direction: column;
             border-right: 1px solid #444;
+            /* Firefox用スクロールバーのスタイル */
+            scrollbar-width: thin;
+            scrollbar-color: #555 #2d2d2d;
         }
 
         /* エディタ部分 */
@@ -82,6 +88,9 @@
             overflow-y: auto;
             font-family: monospace;
             border-top: 1px solid #444;
+            /* Firefox用スクロールバーのスタイル */
+            scrollbar-width: thin;
+            scrollbar-color: #555 #2d2d2d;
         }
 
         /* 右側の列（ゲーム画面） */
@@ -92,6 +101,9 @@
             flex-direction: column;
             padding: 10px;
             box-sizing: border-box;
+            /* Firefox用スクロールバーのスタイル */
+            scrollbar-width: thin;
+            scrollbar-color: #555 #2d2d2d;
         }
 
         /* ゲーム情報 */
@@ -111,6 +123,10 @@
             grid-template-columns: repeat(17, 20px);
             grid-template-rows: repeat(19, 20px);
             gap: 1px;
+            overflow: auto;
+            /* Firefox用スクロールバーのスタイル */
+            scrollbar-width: thin;
+            scrollbar-color: #555 #2d2d2d;
         }
 
         .cell {
@@ -150,6 +166,65 @@
             background-color: #1e1e1e;
             color: #fff;
             font-size: 16px;
+            /* Firefox用スクロールバーのスタイル */
+            scrollbar-width: thin;
+            scrollbar-color: #555 #2d2d2d;
+        }
+
+        /* WebKitベースのブラウザ用スクロールバーのカスタマイズ */
+
+        /* 全体のスクロールバー */
+        body::-webkit-scrollbar {
+            width: 12px;
+        }
+
+        body::-webkit-scrollbar-track {
+            background: #2d2d2d;
+        }
+
+        body::-webkit-scrollbar-thumb {
+            background-color: #555;
+            border-radius: 6px;
+            border: 3px solid #2d2d2d;
+        }
+
+        /* CodeMirrorのスクロールバー */
+        .CodeMirror::-webkit-scrollbar {
+            width: 12px;
+        }
+
+        .CodeMirror::-webkit-scrollbar-track {
+            background: #2d2d2d;
+        }
+
+        .CodeMirror::-webkit-scrollbar-thumb {
+            background-color: #555;
+            border-radius: 6px;
+            border: 3px solid #2d2d2d;
+        }
+
+        /* その他の要素のスクロールバー */
+        .left-column::-webkit-scrollbar,
+        .right-column::-webkit-scrollbar,
+        #console-output::-webkit-scrollbar,
+        #game-grid::-webkit-scrollbar {
+            width: 12px;
+        }
+
+        .left-column::-webkit-scrollbar-track,
+        .right-column::-webkit-scrollbar-track,
+        #console-output::-webkit-scrollbar-track,
+        #game-grid::-webkit-scrollbar-track {
+            background: #2d2d2d;
+        }
+
+        .left-column::-webkit-scrollbar-thumb,
+        .right-column::-webkit-scrollbar-thumb,
+        #console-output::-webkit-scrollbar-thumb,
+        #game-grid::-webkit-scrollbar-thumb {
+            background-color: #555;
+            border-radius: 6px;
+            border: 3px solid #2d2d2d;
         }
     </style>
 </head>
