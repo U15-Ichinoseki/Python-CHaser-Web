@@ -3,6 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <title>CHaserWeb</title>
+    <!-- Google Fontsのリンクを追加 -->
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP&family=Source+Code+Pro&display=swap" rel="stylesheet">
     <!-- CodeMirrorのCSSを読み込み -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.13/codemirror.min.css">
     <!-- CodeMirrorのテーマ（任意） -->
@@ -13,7 +15,7 @@
         /* 全体のスタイル */
         body {
             margin: 0;
-            font-family: 'Roboto', sans-serif;
+            font-family: 'Noto Sans JP', sans-serif; /* フォントをNoto Sans JPに変更 */
             background-color: #1e1e1e;
             color: #ccc;
             /* Firefox用スクロールバーのスタイル */
@@ -73,6 +75,7 @@
             margin-right: 10px;
             cursor: pointer;
             border-radius: 4px;
+            font-family: 'Noto Sans JP', sans-serif; /* ボタンのフォントをNoto Sans JPに */
         }
 
         .button-group button:hover {
@@ -113,6 +116,7 @@
 
         #game-info h2 {
             color: #fff;
+            font-family: 'Noto Sans JP', sans-serif;
             font-size: 18px;
             margin-bottom: 10px;
         }
@@ -166,6 +170,7 @@
             background-color: #1e1e1e;
             color: #fff;
             font-size: 16px;
+            font-family: 'Source Code Pro', monospace; /* フォントをSource Code Proに変更 */
             /* Firefox用スクロールバーのスタイル */
             scrollbar-width: thin;
             scrollbar-color: #555 #2d2d2d;
