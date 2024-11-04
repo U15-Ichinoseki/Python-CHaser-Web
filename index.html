@@ -230,6 +230,45 @@
             border-radius: 6px;
             border: 3px solid #2d2d2d;
         }
+
+        /* 全角スペースを可視化するスタイル */
+        .cm-full-width-space {
+            background-color: rgba(255, 0, 0, 0.3); /* 背景色を赤に設定 */
+        }
+
+        /* 不可視文字（スペース、タブ）を可視化するスタイル */
+        .cm-whitespace-space::before {
+            content: '·';
+            color: rgba(128, 128, 128, 0.7);
+            position: absolute;
+        }
+        .cm-whitespace-tab::before {
+            content: '→';
+            color: rgba(128, 128, 128, 0.7);
+            position: absolute;
+        }
+
+        /* インデントガイド用のスタイル */
+        .CodeMirror-code .CodeMirror-line::before {
+            content: '';
+            position: absolute;
+            border-left: 1px solid rgba(128, 128, 128, 0.3);
+            height: 100%;
+            pointer-events: none;
+        }
+
+        /* インデントレベルに応じて左位置を調整 */
+        .CodeMirror-code .CodeMirror-line {
+            position: relative;
+        }
+
+        /* インデントレベルのクラスを定義 */
+        .CodeMirror-code .CodeMirror-line.indent-level-1::before { left: 4ch; }
+        .CodeMirror-code .CodeMirror-line.indent-level-2::before { left: 8ch; }
+        .CodeMirror-code .CodeMirror-line.indent-level-3::before { left: 12ch; }
+        .CodeMirror-code .CodeMirror-line.indent-level-4::before { left: 16ch; }
+        .CodeMirror-code .CodeMirror-line.indent-level-5::before { left: 20ch; }
+        /* 必要に応じてインデントレベルを追加 */
     </style>
 </head>
 <body>
@@ -291,9 +330,13 @@
             },
         });
 
+        // タブ文字をスペースに置き換える
+        function replaceTabsWithSpaces(str) {
+            return str.replace(/\t/g, '    ');
+        }
 
         // sample.pyをエディタに読み込む（ユーザー提供のコード）
-        editor.setValue(`# sample.py
+        editor.setValue(replaceTabsWithSpaces(`# sample.py
 
 import CHaser  # 同じディレクトリに CHaser.py がある前提
 
@@ -349,7 +392,7 @@ def main():
 
 if __name__ == "__main__":
     main()
-`);
+`));
 
         let pyodideReadyPromise = loadPyodide();
 
@@ -960,6 +1003,8 @@ sys.stdout = sys.stderr = ConsoleOutput()
 transformed_code = transform_code(user_code)
 `);
                 let transformed_code = pyodide.globals.get('transformed_code');
+                // 変換後のコードをコンソールに出力
+                console.log("Transformed Code:\\n", transformed_code);
 
                 pyodide.globals.set('transformed_code', transformed_code);
                 await pyodide.runPythonAsync(`
@@ -1025,11 +1070,71 @@ do_turn = main()
                     let reader = new FileReader();
                     reader.onload = function(e) {
                         let content = e.target.result;
-                        editor.setValue(content);
+                        editor.setValue(replaceTabsWithSpaces(content));
                     };
                     reader.readAsText(file);
                 }
             });
+
+            // 全角スペースを検出してハイライトするオーバーレイを定義
+            var fullWidthSpaceOverlay = {
+                token: function(stream) {
+                    if (stream.peek() === '\u3000') {
+                        stream.next();
+                        return 'full-width-space';
+                    }
+                    while (!stream.eol() && stream.peek() !== '\u3000') {
+                        stream.next();
+                    }
+                    return null;
+                }
+            };
+
+            // エディタにオーバーレイを適用
+            editor.addOverlay(fullWidthSpaceOverlay);
+
+            // 不可視文字（スペース、タブ）を検出して可視化するオーバーレイを定義
+            var invisiblesOverlay = {
+                token: function(stream) {
+                    if (stream.peek() === ' ') {
+                        stream.next();
+                        return 'whitespace-space';
+                    } else if (stream.peek() === '\t') {
+                        stream.next();
+                        return 'whitespace-tab';
+                    } else {
+                        stream.next();
+                        return null;
+                    }
+                }
+            };
+
+            // エディタにオーバーレイを追加
+            editor.addOverlay(invisiblesOverlay);
+
+            // 各行のインデントレベルを計算してクラスを追加
+            editor.on('renderLine', function(cm, line, element) {
+                var text = line.text;
+                var indentUnit = cm.getOption('indentUnit');
+                var indentLevel = 0;
+                var spaces = 0;
+
+                for (var i = 0; i < text.length; i++) {
+                    if (text[i] === ' ') {
+                        spaces++;
+                    } else {
+                        break;
+                    }
+                }
+
+                indentLevel = Math.floor(spaces / indentUnit);
+                if (indentLevel > 0) {
+                    element.classList.add('indent-level-' + indentLevel);
+                }
+            });
+
+            editor.refresh(); // レンダリングを再実行
+
         }
 
         main();
