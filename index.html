@@ -279,12 +279,18 @@
             lineNumbers: true,
             indentUnit: 4,
             theme: 'monokai',
-            keyMap: 'sublime',
             autoCloseBrackets: true,
             matchBrackets: true,
             tabSize: 4,
             indentWithTabs: false,
+            extraKeys: {
+                Tab: function(cm) {
+                    var spaces = Array(cm.getOption("indentUnit") + 1).join(" ");
+                    cm.replaceSelection(spaces);
+                }
+            },
         });
+
 
         // sample.pyをエディタに読み込む（ユーザー提供のコード）
         editor.setValue(`# sample.py
