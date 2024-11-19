@@ -132,11 +132,13 @@
             scrollbar-color: #555 #2d2d2d;
         }
 
+        /* セルのサイズを変更（例：40px） */
         .cell {
             width: 20px;
             height: 20px;
             background-color: #333;
         }
+
 
         .floor {
             background-color: #E6E7E8;
@@ -269,6 +271,56 @@
         .CodeMirror-code .CodeMirror-line.indent-level-4::before { left: 16ch; }
         .CodeMirror-code .CodeMirror-line.indent-level-5::before { left: 20ch; }
         /* 必要に応じてインデントレベルを追加 */
+
+        /* 凡例のスタイル */
+        #legend {
+            margin-top: 20px;
+        }
+
+        #legend h3 {
+            color: #fff;
+            font-size: 16px;
+            margin-bottom: 10px;
+        }
+
+        #legend ul {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+        }
+
+        #legend li {
+            display: flex;
+            align-items: center;
+            margin-bottom: 5px;
+        }
+
+        .legend-cell {
+            width: 20px;
+            height: 20px;
+            margin-right: 10px;
+        }
+
+        .legend-cell.floor {
+            background-color: #E6E7E8;
+        }
+
+        .legend-cell.block {
+            background-color: #777;
+        }
+
+        .legend-cell.item {
+            background-color: #e91e63;
+        }
+
+        .legend-cell.player0 {
+            background-color: #2196f3;
+        }
+
+        .legend-cell.player1 {
+            background-color: #4caf50;
+        }
+
     </style>
 </head>
 <body>
@@ -294,11 +346,21 @@
                 <h2>ゲーム情報</h2>
                 <p id="turn-number">Turn: 150</p>
                 <p id="player-scores">Scores - あなた: 0, サンプルAI: 0</p>
-            </div>
-            <div id="game-display">
-                <h2>ゲーム画面</h2>
-                <div id="game-grid"></div>
-            </div>
+                <div id="game-display">
+                    <h2>ゲーム画面</h2>
+                    <div id="game-grid"></div>
+                    <!-- 凡例を追加 -->
+                    <div id="legend">
+                        <h3>マス種類</h3>
+                        <ul>
+                            <li><span class="legend-cell floor"></span> 床</li>
+                            <li><span class="legend-cell block"></span> ブロック</li>
+                            <li><span class="legend-cell item"></span> アイテム（ハート）</li>
+                            <li><span class="legend-cell player0"></span> あなた</li>
+                            <li><span class="legend-cell player1"></span> サンプルAI</li>
+                        </ul>
+                    </div>
+                </div>
         </div>
     </div>
 
