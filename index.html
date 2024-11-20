@@ -238,14 +238,9 @@
             background-color: rgba(255, 0, 0, 0.3); /* 背景色を赤に設定 */
         }
 
-        /* 不可視文字（スペース、タブ）を可視化するスタイル */
+        /* 不可視文字（スペース）を可視化するスタイル */
         .cm-whitespace-space::before {
             content: '·';
-            color: rgba(128, 128, 128, 0.7);
-            position: absolute;
-        }
-        .cm-whitespace-tab::before {
-            content: '→';
             color: rgba(128, 128, 128, 0.7);
             position: absolute;
         }
@@ -1200,15 +1195,12 @@ do_turn = main()`
             // エディタにオーバーレイを適用
             editor.addOverlay(fullWidthSpaceOverlay);
 
-            // 不可視文字（スペース、タブ）を検出して可視化するオーバーレイを定義
+            // 不可視文字（スペース）を検出して可視化するオーバーレイを定義
             var invisiblesOverlay = {
                 token: function(stream) {
                     if (stream.peek() === ' ') {
                         stream.next();
                         return 'whitespace-space';
-                    } else if (stream.peek() === '\t') {
-                        stream.next();
-                        return 'whitespace-tab';
                     } else {
                         stream.next();
                         return null;
