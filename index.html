@@ -993,7 +993,6 @@ def transform_code(source_code):
             // 必要なPythonパッケージをロード
             await pyodide.loadPackage(['micropip']);
 
-
             // print文をコンソール出力にリダイレクト
             let consoleOutput = document.getElementById('console-output');
             function writeToConsole(msg) {
@@ -1007,8 +1006,8 @@ def transform_code(source_code):
             writeToConsole('CDNの読み込みが完了しました');
 
             // 標準出力と標準エラー出力をリダイレクト
-            pyodide.runPython(
-`import sys
+            pyodide.runPython(`
+import sys
 class ConsoleOutput:
     def __init__(self):
         self.buffer = ''
@@ -1022,6 +1021,16 @@ class ConsoleOutput:
     def flush(self):
         pass
 sys.stdout = sys.stderr = ConsoleOutput()
+
+# カスタムの例外フックを定義
+def custom_excepthook(exctype, value, tb):
+    import traceback
+    from js import writeToConsole
+    tb_text = ''.join(traceback.format_exception(exctype, value, tb))
+    writeToConsole(tb_text)
+
+# カスタムの例外フックを設定
+sys.excepthook = custom_excepthook
 `);
 
             // updateGameDisplayをPythonから使用できるようにする
@@ -1084,47 +1093,59 @@ sys.stdout = sys.stderr = ConsoleOutput()
                     // ユーザーコードを実行
                     await executeUserCode(userCode);
                 } catch (err) {
-                    writeToConsole(err);
+                    writeToConsole(err.message || err);
                 }
             });
 
             async function executeUserCode(userCode) {
-                // 必要なモジュールを再インポート
-                await pyodide.runPythonAsync(transformerCode);
+                try {
+                    // 必要なモジュールを再インポート
+                    await pyodide.runPythonAsync(transformerCode);
 
-                // CHaser.pyを仮想ファイルシステムに書き込む
-                pyodide.FS.writeFile('CHaser.py', chaserCode);
+                    // CHaser.pyを仮想ファイルシステムに書き込む
+                    pyodide.FS.writeFile('CHaser.py', chaserCode);
 
-                // ユーザーコードを変換して実行
-                pyodide.globals.set('user_code', userCode);
-                await pyodide.runPythonAsync(
-`transformed_code = transform_code(user_code)`
-                );
-                let transformed_code = pyodide.globals.get('transformed_code');
-                // 変換後のコードをコンソールに出力
-                console.log("Transformed Code:\\n", transformed_code);
+                    // ユーザーコードを変換して実行
+                    pyodide.globals.set('user_code', userCode);
+                    await pyodide.runPythonAsync(`
+transformed_code = transform_code(user_code)
+                    `);
+                    let transformed_code = pyodide.globals.get('transformed_code');
+                    // 変換後のコードをコンソールに出力
+                    console.log("Transformed Code:\\n", transformed_code);
 
-                pyodide.globals.set('transformed_code', transformed_code);
-                await pyodide.runPythonAsync(
-`exec(transformed_code)
-do_turn = main()`
-                );
+                    pyodide.globals.set('transformed_code', transformed_code);
+                    await pyodide.runPythonAsync(`
+exec(transformed_code)
+do_turn = main()
+                    `);
 
-                // ゲーム実行フラグを設定
-                gameRunning = true;
-                runTurn();
+                    // ゲーム実行フラグを設定
+                    gameRunning = true;
+                    runTurn();
+                } catch (err) {
+                    // エラーメッセージを表示
+                    writeToConsole(err.message || err);
+                }
             }
 
             function runTurn() {
                 if (!gameRunning) return;
 
                 let do_turn = pyodide.globals.get('do_turn');
-                let result = do_turn();
-                if (result) {
-                    // ゲームが続行中の場合、次のターンを実行
-                    turnTimeout = setTimeout(runTurn, 500);
-                } else {
-                    // ゲーム終了
+                try {
+                    let result = do_turn();
+                    if (result) {
+                        // ゲームが続行中の場合、次のターンを実行
+                        turnTimeout = setTimeout(runTurn, 500);
+                    } else {
+                        // ゲーム終了
+                        gameRunning = false;
+                        console.log('ゲームが終了しました');
+                    }
+                } catch (err) {
+                    // エラーメッセージを表示
+                    writeToConsole(err.message || err);
                     gameRunning = false;
                     console.log('ゲームが終了しました');
                 }
