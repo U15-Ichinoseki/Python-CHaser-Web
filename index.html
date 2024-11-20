@@ -1002,6 +1002,7 @@ def transform_code(source_code):
             // 必要なPythonパッケージをロード
             await pyodide.loadPackage(['micropip']);
 
+
             // print文をコンソール出力にリダイレクト
             let consoleOutput = document.getElementById('console-output');
             function writeToConsole(msg) {
@@ -1010,6 +1011,9 @@ def transform_code(source_code):
             }
             // writeToConsoleをグローバルスコープに配置
             window.writeToConsole = writeToConsole;
+
+            // CDNの読み込み完了メッセージを表示
+            writeToConsole('CDNの読み込みが完了しました');
 
             // 標準出力と標準エラー出力をリダイレクト
             pyodide.runPython(
