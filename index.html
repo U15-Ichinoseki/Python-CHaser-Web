@@ -15,12 +15,14 @@
         /* 全体のスタイル */
         body {
             margin: 0;
-            font-family: 'IBM Plex Sans JP', sans-serif; /* フォントをIBM Plex Sans JPに変更 */
+            font-family: 'IBM Plex Sans JP', sans-serif;
             background-color: #1e1e1e;
             color: #ccc;
-            /* Firefox用スクロールバーのスタイル */
             scrollbar-width: thin;
             scrollbar-color: #555 #2d2d2d;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
         }
 
         /* ヘッダーのスタイル */
@@ -40,7 +42,8 @@
         /* メインコンテナ */
         .container {
             display: flex;
-            height: calc(100vh - 50px);
+            flex: 1;
+            overflow: hidden;
         }
 
         /* 左側の列（エディタとコンソール） */
@@ -49,14 +52,13 @@
             display: flex;
             flex-direction: column;
             border-right: 1px solid #444;
-            /* Firefox用スクロールバーのスタイル */
-            scrollbar-width: thin;
-            scrollbar-color: #555 #2d2d2d;
+            overflow: hidden;
         }
 
         /* エディタ部分 */
         #editor {
             flex-grow: 1;
+            overflow: auto;
         }
 
         /* ボタン群 */
@@ -75,7 +77,7 @@
             margin-right: 10px;
             cursor: pointer;
             border-radius: 4px;
-            font-family: 'IBM Plex Sans JP', sans-serif; /* ボタンのフォントをIBM Plex Sans JPに */
+            font-family: 'IBM Plex Sans JP', sans-serif;
         }
 
         .button-group button:hover {
@@ -87,24 +89,23 @@
             background-color: #1e1e1e;
             color: #fff;
             padding: 10px;
-            height: 150px;
+            height: 100px;
             overflow-y: auto;
             font-family: monospace;
             border-top: 1px solid #444;
-            /* Firefox用スクロールバーのスタイル */
             scrollbar-width: thin;
             scrollbar-color: #555 #2d2d2d;
         }
 
         /* 右側の列（ゲーム画面） */
         .right-column {
-            width: 400px;
+            flex: 0 0 40%;
             background-color: #252526;
             display: flex;
             flex-direction: column;
             padding: 10px;
             box-sizing: border-box;
-            /* Firefox用スクロールバーのスタイル */
+            overflow-y: auto;
             scrollbar-width: thin;
             scrollbar-color: #555 #2d2d2d;
         }
@@ -123,22 +124,20 @@
         /* ゲームグリッド */
         #game-grid {
             display: grid;
-            grid-template-columns: repeat(17, 20px);
-            grid-template-rows: repeat(19, 20px);
+            grid-template-columns: repeat(17, 30px);
+            grid-template-rows: repeat(19, 30px);
             gap: 1px;
             overflow: auto;
-            /* Firefox用スクロールバーのスタイル */
             scrollbar-width: thin;
             scrollbar-color: #555 #2d2d2d;
         }
 
-        /* セルのサイズを変更（例：40px） */
+        /* セルのサイズを変更 */
         .cell {
-            width: 20px;
-            height: 20px;
+            width: 30px;
+            height: 30px;
             background-color: #333;
         }
-
 
         .floor {
             background-color: #E6E7E8;
@@ -171,14 +170,12 @@
             background-color: #1e1e1e;
             color: #fff;
             font-size: 16px;
-            font-family: 'IBM Plex Mono', monospace; /* フォントをIBM Plex Monoに変更 */
-            /* Firefox用スクロールバーのスタイル */
+            font-family: 'IBM Plex Mono', monospace;
             scrollbar-width: thin;
             scrollbar-color: #555 #2d2d2d;
         }
 
         /* WebKitベースのブラウザ用スクロールバーのカスタマイズ */
-
         /* 全体のスクロールバー */
         body::-webkit-scrollbar {
             width: 12px;
@@ -235,7 +232,7 @@
 
         /* 全角スペースを可視化するスタイル */
         .cm-full-width-space {
-            background-color: rgba(255, 0, 0, 0.3); /* 背景色を赤に設定 */
+            background-color: rgba(255, 0, 0, 0.3);
         }
 
         /* 不可視文字（スペース）を可視化するスタイル */
@@ -265,7 +262,6 @@
         .CodeMirror-code .CodeMirror-line.indent-level-3::before { left: 12ch; }
         .CodeMirror-code .CodeMirror-line.indent-level-4::before { left: 16ch; }
         .CodeMirror-code .CodeMirror-line.indent-level-5::before { left: 20ch; }
-        /* 必要に応じてインデントレベルを追加 */
 
         /* 凡例のスタイル */
         #legend {
