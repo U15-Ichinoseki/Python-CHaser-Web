@@ -1,6 +1,8 @@
 # CHaserWeb
 
 CHaserWebは、U16プログラミングコンテストで使用される対戦型プラットフォーム「CHaser」向けのプログラムを開発するためのWebアプリケーションです。
+クライアントプログラムはtomioさんPythonライブラリでの作り方に対応しております。
+- [CHaser client library - Python3](https://github.com/tomio2480/chaser-python)
 
 注意：公式のサーバーと同一の動作を保証するものではありません。
 
