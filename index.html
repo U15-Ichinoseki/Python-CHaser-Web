@@ -390,7 +390,7 @@
 
         // sample.pyをエディタに読み込む（ユーザー提供のコード）
         editor.setValue(replaceTabsWithSpaces(`# sample
-import CHaser # 同じディレクトリに CHaser.py がある前提
+from lib.CHaser import * # lib/CHaser.py
 
 """
 このファイルを直接実行したときに実行する関数．
@@ -411,7 +411,7 @@ get_ready() → 行動関数 → get_ready() → ... の順で必ず処理を行
 """
 def main():
     value = [] # フィールド情報を保存するリスト
-    client = CHaser.Client() # サーバーと通信するためのインスタンス
+    client = Client() # サーバーと通信するためのインスタンス
 
     while(True):
         value = client.get_ready() # サーバーに行動準備が完了したと伝える
@@ -1102,8 +1102,12 @@ sys.excepthook = custom_excepthook
                     // 必要なモジュールを再インポート
                     await pyodide.runPythonAsync(transformerCode);
 
+                    if (!pyodide.FS.analyzePath('lib').exists) {
+                        pyodide.FS.mkdir('lib');
+                    }
+
                     // CHaser.pyを仮想ファイルシステムに書き込む
-                    pyodide.FS.writeFile('CHaser.py', chaserCode);
+                    pyodide.FS.writeFile('lib/CHaser.py', chaserCode);
 
                     // ユーザーコードを変換して実行
                     pyodide.globals.set('user_code', userCode);
