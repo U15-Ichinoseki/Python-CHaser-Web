@@ -1151,6 +1151,18 @@ def transform_code(source_code):
                 new_body = []
                 do_turn_func = None
 
+                # main関数内でglobal宣言されている変数を収集
+                global_vars = set()
+                for stmt in node.body:
+                    if isinstance(stmt, ast.Global):
+                        for name in stmt.names:
+                            global_vars.add(name)
+                    # 代入文なら左辺の変数名をglobal_varsに追加
+                    if isinstance(stmt, ast.Assign):
+                        for target in stmt.targets:
+                            if isinstance(target, ast.Name):
+                                global_vars.add(target.id)
+
                 class ClientCallReplacer(ast.NodeTransformer):
                     def visit_Assign(self, assign_node):
                         # player = lient(port=port, name=name, host=host) を置換
@@ -1169,6 +1181,13 @@ def transform_code(source_code):
                     stmt = ClientCallReplacer().visit(stmt)
                     # while Trueループを探します
                     if isinstance(stmt, ast.While) and isinstance(stmt.test, ast.Constant) and stmt.test.value == True:
+                        # while Trueの中身をdo_turnに
+
+                        # do_turn関数の先頭にglobal宣言を追加
+                        global_nodes = []
+                        if global_vars:
+                            global_nodes.append(ast.Global(list(global_vars)))
+                                                    
                         # 'do_turn'関数を作成します
                         do_turn_func = ast.FunctionDef(
                             name='do_turn',
@@ -1179,7 +1198,15 @@ def transform_code(source_code):
                                 kw_defaults=[],
                                 defaults=[]
                             ),
-                            body=stmt.body + [ast.Return(value=ast.Constant(value=True))],
+                            body=global_nodes +
+								# 'do_turn'の最初にgame_overチェックを追加します
+                                [ast.If(
+                                    test=ast.Attribute(value=ast.Name(id='player', ctx=ast.Load()), attr='game_over', ctx=ast.Load()),
+                                    body=[ast.Return(value=ast.Constant(value=False))],
+                                    orelse=[]
+                                )] +
+                                stmt.body +
+                                [ast.Return(value=ast.Constant(value=True))],
                             decorator_list=[]
                         )
                     else:
@@ -1187,14 +1214,6 @@ def transform_code(source_code):
 
                 # 'do_turn'関数を'main'に追加します
                 if do_turn_func:
-                    # 'do_turn'の最初にgame_overチェックを追加します
-                    game_over_check = ast.If(
-                        test=ast.Attribute(value=ast.Name(id='player', ctx=ast.Load()), attr='game_over', ctx=ast.Load()),
-                        body=[ast.Return(value=ast.Constant(value=False))],
-                        orelse=[]
-                    )
-                    do_turn_func.body.insert(0, game_over_check)
-
                     new_body.append(do_turn_func)
                     # 'main'を修正して'do_turn'を返すようにします
                     new_body.append(ast.Return(value=ast.Name(id='do_turn', ctx=ast.Load())))
