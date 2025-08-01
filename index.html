@@ -1188,6 +1188,14 @@ def transform_code(source_code):
                         if global_vars:
                             global_nodes.append(ast.Global(list(global_vars)))
                                                     
+                        # continueをreturn Trueに変換
+                        class ContinueReplacer(ast.NodeTransformer):
+                            def visit_Continue(self, node):
+                                return ast.Return(value=ast.Constant(value=True))
+                        do_turn_body = []
+                        for s in stmt.body:
+                            do_turn_body.append(ContinueReplacer().visit(s))
+                            
                         # 'do_turn'関数を作成します
                         do_turn_func = ast.FunctionDef(
                             name='do_turn',
@@ -1205,7 +1213,7 @@ def transform_code(source_code):
                                     body=[ast.Return(value=ast.Constant(value=False))],
                                     orelse=[]
                                 )] +
-                                stmt.body +
+                                do_turn_body +
                                 [ast.Return(value=ast.Constant(value=True))],
                             decorator_list=[]
                         )
