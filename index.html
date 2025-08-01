@@ -1146,10 +1146,27 @@ def transform_code(source_code):
         def visit_FunctionDef(self, node):
             # 'main'関数のみを対象にします
             if node.name == 'main':
+                # 引数を空にする
+                node.args.args = []
                 new_body = []
                 do_turn_func = None
 
+                class ClientCallReplacer(ast.NodeTransformer):
+                    def visit_Assign(self, assign_node):
+                        # player = lient(port=port, name=name, host=host) を置換
+                        if (isinstance(assign_node.value, ast.Call) and
+                            isinstance(assign_node.value.func, ast.Name) and
+                            assign_node.value.func.id == 'Client'):
+                            # 引数を固定値に置換
+                            assign_node.value.keywords = [
+                                ast.keyword(arg='port', value=ast.Constant(value=2010)),
+                                ast.keyword(arg='name', value=ast.Constant(value='player')),
+                                ast.keyword(arg='host', value=ast.Constant(value='localhost')),
+                            ]
+                        return assign_node
+
                 for stmt in node.body:
+                    stmt = ClientCallReplacer().visit(stmt)
                     # while Trueループを探します
                     if isinstance(stmt, ast.While) and isinstance(stmt.test, ast.Constant) and stmt.test.value == True:
                         # 'do_turn'関数を作成します
@@ -1172,7 +1189,7 @@ def transform_code(source_code):
                 if do_turn_func:
                     # 'do_turn'の最初にgame_overチェックを追加します
                     game_over_check = ast.If(
-                        test=ast.Attribute(value=ast.Name(id='client', ctx=ast.Load()), attr='game_over', ctx=ast.Load()),
+                        test=ast.Attribute(value=ast.Name(id='player', ctx=ast.Load()), attr='game_over', ctx=ast.Load()),
                         body=[ast.Return(value=ast.Constant(value=False))],
                         orelse=[]
                     )
